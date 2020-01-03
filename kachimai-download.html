@@ -6,7 +6,7 @@
 <title>勝毎紙面ダウンロード</title>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 <script type="text/javascript">
-var kachimai_url_base = "http://kachimai.jp/dl/pdf_download.php?f=all";
+const kachimai_url_base = "http://kachimai.jp/dl/pdf_download.php?f=all";
 $(()=>{
     for(let i = 0; i <= 5; i++) {
         let idstr = "#dl-" + i.toString() + "daysago";
@@ -24,15 +24,15 @@ function kachimai_url(daysago) {
 function yyyymmdd(daysago) {
     if(typeof daysago !== "undefined" && typeof daysago !== "number")
         throw "yyyymmdd: number require";
-    var now = new Date();
-    var date = new Date( now.getTime() - 86400 * 1000 * daysago );
-    var year = date.getFullYear().toString();
-    var mon  = date.getMonth() + 1;
-    var day  = date.getDate();
+    let now  = new Date();
+    let date = new Date( now.getTime() - 86400 * 1000 * daysago );
+    let year = date.getFullYear().toString();
+    let mon  = date.getMonth() + 1;
+    let day  = date.getDate();
     return year + pad(mon) + pad(day);
 }
 function pad(number) {
-    var str = number.toString();
+    let str = number.toString();
     if ( str.length == 1 ) str = "0" + str;
     return str;
 }
