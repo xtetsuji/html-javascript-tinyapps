@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<!-- kachimai-dl.html 2017/11/20 -->
+<html>
+<head>
+<meta charset="utf-8">
+<title>勝毎紙面ダウンロード</title>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script type="text/javascript">
+var kachimai_url_base = "http://kachimai.jp/dl/pdf_download.php?f=all";
+$(()=>{
+    for(let i = 0; i <= 5; i++) {
+        let idstr = "#dl-" + i.toString() + "daysago";
+        $(idstr).on("click", ()=>{
+            location.href = kachimai_url(i);
+        });
+        let text = $(idstr).text();
+        let ymd  = yyyymmdd(i).replace(/^(\d\d\d\d)(\d\d)(\d\d)/, "$1/$2/$3");
+        $(idstr).text(text + " (" + ymd + ")");
+    }
+});
+function kachimai_url(daysago) {
+    return kachimai_url_base + yyyymmdd(daysago);
+}
+function yyyymmdd(daysago) {
+    if(typeof daysago !== "undefined" && typeof daysago !== "number")
+        throw "yyyymmdd: number require";
+    var now = new Date();
+    var date = new Date( now.getTime() - 86400 * 1000 * daysago );
+    var year = date.getFullYear().toString();
+    var mon  = date.getMonth() + 1;
+    var day  = date.getDate();
+    return year + pad(mon) + pad(day);
+}
+function pad(number) {
+    var str = number.toString();
+    if ( str.length == 1 ) str = "0" + str;
+    return str;
+}
+</script>
+<style type="text/css">
+body { margin: 0; padding: 0; }
+ul#dl-list { margin: 0; padding: 0; }
+ul#dl-list button {
+    font-size: 2em;
+    width: 100%;
+    text-align: center;
+}
+</style>
+<link rel="apple-touch-icon-precomposed" href="http://kachimai.jp/bookmarkicon.png" />
+<link rel="shortcut icon" type="image/x-icon" href="http://kachimai.jp/favicon.ico" />
+</head>
+<body>
+<ul id="dl-list">
+<li><button id="dl-0daysago">本日ダウンロード</button>
+<li><button id="dl-1daysago">昨日ダウンロード</button>
+<li><button id="dl-2daysago">一昨日ダウンロード</button>
+<li><button id="dl-3daysago">3日前ダウンロード</button>
+<li><button id="dl-4daysago">4日前ダウンロード</button>
+<li><button id="dl-5daysago">5日前ダウンロード</button>
+</ul>
+</body>
+</html>
+
