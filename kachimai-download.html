@@ -9,13 +9,12 @@
 const kachimai_url_base = "http://kachimai.jp/dl/pdf_download.php?f=all";
 $(()=>{
     for(let i = 0; i <= 5; i++) {
-        let idstr = "#dl-" + i.toString() + "daysago";
-        $(idstr).on("click", ()=>{
+        let $el = $("#dl-" + i.toString() + "daysago");
+        $el.on("click", ()=>{
             location.href = kachimai_url(i);
         });
-        let text = $(idstr).text();
         let ymd  = yyyymmdd(i).replace(/^(\d\d\d\d)(\d\d)(\d\d)/, "$1/$2/$3");
-        $(idstr).text(text + " (" + ymd + ")");
+        $el.append(`(${ymd})`);
     }
 });
 function kachimai_url(daysago) {
