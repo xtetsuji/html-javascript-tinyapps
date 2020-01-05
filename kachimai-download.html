@@ -5,17 +5,20 @@
 <meta charset="utf-8">
 <title>勝毎紙面ダウンロード</title>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-<script type="text/javascript">
+<script>
 const kachimai_url_base = "http://kachimai.jp/dl/pdf_download.php?f=all";
+const now = new Date();
 $(()=>{
-    for(let i = 0; i <= 5; i++) {
-        let $el = $("#dl-" + i.toString() + "daysago");
-        $el.on("click", ()=>{
-            location.href = kachimai_url(i);
-        });
-        let ymd  = yyyymmdd(i).replace(/^(\d\d\d\d)(\d\d)(\d\d)/, "$1/$2/$3");
-        $el.append(`(${ymd})`);
-    }
+    $("#dl-list li").each(function(){
+        let $this = $(this);
+        let idstr = $this.attr("id");
+        let m = idstr.match(/^dl-(\d+)daysago/);
+        if ( !m ) return;
+        let daysago = Number(m[1]);
+        let cur_text = `${$this.text()}(${ymd(daysago)})`;
+        let new_html = `<a href="${kachimai_url(daysago)}">${cur_text}</a>`;
+        $this.html(new_html);
+    });
 });
 function kachimai_url(daysago) {
     return kachimai_url_base + yyyymmdd(daysago);
@@ -23,12 +26,14 @@ function kachimai_url(daysago) {
 function yyyymmdd(daysago) {
     if(typeof daysago !== "undefined" && typeof daysago !== "number")
         throw "yyyymmdd: number require";
-    let now  = new Date();
     let date = new Date( now.getTime() - 86400 * 1000 * daysago );
     let year = date.getFullYear().toString();
-    let mon  = date.getMonth() + 1;
-    let day  = date.getDate();
-    return year + pad(mon) + pad(day);
+    let mon  = pad(date.getMonth() + 1);
+    let day  = pad(date.getDate());
+    return year + mon + day;
+}
+function ymd(daysago) {
+    return yyyymmdd(daysago).replace(/^(\d\d\d\d)(\d\d)(\d\d)/, "$1/$2/$3");
 }
 function pad(number) {
     let str = number.toString();
@@ -50,12 +55,12 @@ ul#dl-list button {
 </head>
 <body>
 <ul id="dl-list">
-<li><button id="dl-0daysago">本日ダウンロード</button>
-<li><button id="dl-1daysago">昨日ダウンロード</button>
-<li><button id="dl-2daysago">一昨日ダウンロード</button>
-<li><button id="dl-3daysago">3日前ダウンロード</button>
-<li><button id="dl-4daysago">4日前ダウンロード</button>
-<li><button id="dl-5daysago">5日前ダウンロード</button>
+<li id="dl-0daysago">本日</li>
+<li id="dl-1daysago">昨日</li>
+<li id="dl-2daysago">一昨日</li>
+<li id="dl-3daysago">3日前</li>
+<li id="dl-4daysago">4日前</li>
+<li id="dl-5daysago">5日前</li>
 </ul>
 </body>
 </html>
