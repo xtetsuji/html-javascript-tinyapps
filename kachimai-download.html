@@ -42,13 +42,23 @@ function pad(number) {
 }
 </script>
 <style type="text/css">
-body { margin: 0; padding: 0; }
-ul#dl-list { margin: 0; padding: 0; }
-ul#dl-list button {
+body, ul#dl-list { margin: 0; padding: 0; }
+ul#dl-list li {
+    font-family: sans-serif;
     font-size: 2em;
     width: 100%;
     text-align: center;
+    border: 1px solid black;
+    border-radius: 25px;
 }
+ul#dl-list li {
+    background: linear-gradient(white, lightgray);
+}
+a {
+    text-decoration: none;
+    display: block;
+}
+a:visited, a:link { color: black; }
 </style>
 <link rel="apple-touch-icon-precomposed" href="http://kachimai.jp/bookmarkicon.png" />
 <link rel="shortcut icon" type="image/x-icon" href="http://kachimai.jp/favicon.ico" />
