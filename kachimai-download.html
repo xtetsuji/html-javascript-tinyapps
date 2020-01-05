@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<!-- kachimai-dl.html 2017/11/20 -->
+<html>
+<head>
+<meta charset="utf-8">
+<title>勝毎紙面ダウンロード</title>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script>
+const kachimai_url_base = "http://kachimai.jp/dl/pdf_download.php?f=all";
+const now = new Date();
+$(()=>{
+    $("#dl-list li").each(function(){
+        let $this = $(this);
+        let idstr = $this.attr("id");
+        let m = idstr.match(/^dl-(\d+)daysago/);
+        if ( !m ) return;
+        let daysago = Number(m[1]);
+        let cur_text = `${$this.text()}(${ymd(daysago)})`;
+        let new_html = `<a href="${kachimai_url(daysago)}">${cur_text}</a>`;
+        $this.html(new_html);
+    });
+});
+function kachimai_url(daysago) {
+    return kachimai_url_base + yyyymmdd(daysago);
+}
+function yyyymmdd(daysago) {
+    if(typeof daysago !== "undefined" && typeof daysago !== "number")
+        throw "yyyymmdd: number require";
+    let date = new Date( now.getTime() - 86400 * 1000 * daysago );
+    let year = date.getFullYear().toString();
+    let mon  = pad(date.getMonth() + 1);
+    let day  = pad(date.getDate());
+    return year + mon + day;
+}
+function ymd(daysago) {
+    return yyyymmdd(daysago).replace(/^(\d\d\d\d)(\d\d)(\d\d)/, "$1/$2/$3");
+}
+function pad(number) {
+    let str = number.toString();
+    if ( str.length == 1 ) str = "0" + str;
+    return str;
+}
+</script>
+<style type="text/css">
+body, ul#dl-list { margin: 1px; padding: 0; } /* 1px は li の border 分 */
+ul#dl-list li {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "ヒラギノ角ゴ ProN W3", Meiryo, "メイリオ", sans-serif;
+    font-size: 2em;
+    width: 100%;
+    text-align: center;
+    border: 1px solid black;
+    border-radius: 25px;
+    padding: 8px 0px;
+    margin: 4px 0px;
+}
+ul#dl-list li {
+    background: linear-gradient(white, lightgray);
+}
+a {
+    text-decoration: none;
+    display: block;
+}
+a:visited, a:link { color: black; }
+</style>
+<link rel="apple-touch-icon-precomposed" href="http://kachimai.jp/bookmarkicon.png" />
+<link rel="shortcut icon" type="image/x-icon" href="http://kachimai.jp/favicon.ico" />
+</head>
+<body>
+<ul id="dl-list">
+<li id="dl-0daysago">本日</li>
+<li id="dl-1daysago">昨日</li>
+<li id="dl-2daysago">一昨日</li>
+<li id="dl-3daysago">3日前</li>
+<li id="dl-4daysago">4日前</li>
+<li id="dl-5daysago">5日前</li>
+</ul>
+</body>
+</html>
+
