@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>クリップボード行ごとコピー支援</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <style type='text/css'>
+    h1 { font-size: 1.5em; }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script language='javascript'>
+        function html_escape(str) {
+            return [ ['&', 'amp'], ['<', 'lt'], ['>', 'gt'], ['"', 'quot'], ["'", 'apos'] ].reduce(
+                (curstr, [char, entname]) => curstr.replace(new RegExp(char, 'g'), `&${entname};`),
+                str
+            );
+        }
+        $(function() {
+            console.log('loaded');
+            $('#copy_content_button').on('click', () => {
+                const content = $('#copy_content').val();
+                console.log('content: ', content);
+                const ul = $('#per_line_result');
+                ul.empty();
+                for ( const line of content.split(/\n/) ) {
+                    if ( line.match(/^\s*$/) ) continue;
+                    console.log('line', line);
+                    const li = $('<li></li>');
+                    const line_copy_button = $('<button></button>');
+                    line_copy_button.attr('class', 'line_copy_button');
+                    line_copy_button.append('コピー');
+                    li.append(line_copy_button);
+                    const line_content = $('<span></span>');
+                    line_content.attr('class', 'line_content');
+                    line_content.append(html_escape(line));
+                    li.append(line_content);
+                    const line_hidden = $('<input type="input"></input>');
+                    line_hidden.val(line);
+                    line_hidden.attr('class', 'line_hidden');
+                    line_hidden.attr('readonly', 'readonly');
+                    line_hidden.css('display', 'none');
+                    li.append(line_hidden);
+                    ul.append(li);
+                }
+                $('ul#per_line_result li').each(function(){
+                    const $li = $(this);
+                    const $input = $li.find('input.line_hidden');
+                    $li.find('.line_copy_button').on('click', () => {
+                        $input.css('display', 'inline');
+                        $input[0].select();
+                        document.execCommand('copy');
+                        $input.css('display', 'none');
+                        $li.append('<span class="execinfo" style="color: red;">コピーしたよ</span>');
+                    });
+                });
+            });
+        });
+    </script>
+</head>
+<body>
+<h1>クリップボード行ごとコピー支援</h1>
+
+<textarea id="copy_content" rows="15" cols="70">
+aaa
+bbb
+ccc
+</textarea>
+<div><button id="copy_content_button">上記を行ごとにコピーできるようにする！</button></div>
+
+<ul id="per_line_result">
+</ul>
+</body>
+</html>
