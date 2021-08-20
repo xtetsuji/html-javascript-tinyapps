@@ -25,6 +25,14 @@
             document.getElementById("last_update").innerText = now_date.toString();
             document.getElementById("menekiato").innerText = 14 - day;
             // TODO: 14 - day <= 0 の場合の表示
+            document.getElementById("toggle_description").addEventListener("click", () => {
+                const style = document.getElementById("description").style
+                if ( style.display !== "block" ) {
+                    style.display = "block";
+                } else {
+                    style.display = "none";
+                }
+            });
         }
         addEventListener("load", () => {
             update_message();
@@ -39,6 +47,10 @@
             font-weight: bold;
             font-size: 1.5em;
         }
+        #description {
+            border: 1px solid green;
+            display: none;
+        }
         @media (prefers-color-scheme: dark) {
             body {
                 background-color: #000;
@@ -52,5 +64,9 @@
 <div>免疫が付くまであと<span id="menekiato">...</span>日</div>
 <hr>
 <div>Last Update: <span id="last_update"></span></div>
+
+<div><legend><button id="toggle_description">▼説明</button></legend></div>
+<p id="description">時間はHTMLに直接書かれています。使う方はダウンロードしてその箇所を書き換えてローカルで開いて使用して下さい。</p>
+
 </body>
 </html>
