@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <title>接種後経過時間</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <script>
+        // 接種日時を設定
+        const injection_date = new Date(2021, 8-1, 17, 16, 40);
+        function parse_ms(ms) {
+            const total_second = Math.floor( ms / 1000 );
+            const day     = Math.floor( total_second / 86400 );
+            const hour    = Math.floor( total_second % 86400 / 3600 );
+            const minute  = Math.floor( total_second % 3600 / 60 );
+            return [day, hour, minute];
+        }
+        function update_message() {
+            const now_date = new Date();
+            const diff = now_date - injection_date;
+            const [day, hour, minute] = parse_ms(diff);
+            const sesshugo = `${day}日と${hour}時間${minute}分` + (
+                day >= 1 ? `（${hour + 24 * day}時間）` : ''
+            );
+            document.getElementById("sesshugo").innerText = sesshugo;
+            document.getElementById("last_update").innerText = now_date.toString();
+            document.getElementById("menekiato").innerText = 14 - day;
+            // TODO: 14 - day <= 0 の場合の表示
+        }
+        addEventListener("load", () => {
+            update_message();
+            setInterval(update_message, 60 * 1000);
+        });
+    </script>
+    <style>
+        body {
+            font-size: 24pt;
+        }
+        #sesshugo {
+            font-weight: bold;
+            font-size: 1.5em;
+        }
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #000;
+                color: #888
+            }
+        }
+    </style>
+</head>
+<body>
+<div>接種後<br><span id="sesshugo">...</span><br>経過しました。</div>
+<div>免疫が付くまであと<span id="menekiato">...</span>日</div>
+<hr>
+<div>Last Update: <span id="last_update"></span></div>
+</body>
+</html>
