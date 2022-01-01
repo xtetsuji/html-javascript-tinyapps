@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>JAL先得カレンダー色分け</title>
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script type="text/javascript">
+var DEBUG = false;
+$(function(){
+    const now = new Date();
+    const $calendars = $("#calendars");
+    const sample_pairs = [[now.getFullYear(), now.getMonth() + 1]];
+    while ( sample_pairs.length <= 11 ) {
+        sample_pairs.push( get_next_ym(...sample_pairs[sample_pairs.length - 1] ) );
+    }
+    console.log(sample_pairs);
+    for ( const [year, month] of sample_pairs ) {
+        $calendars.append(render_calendar(year, month));
+    }
+});
+const LAST_DAY = [undefined, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+function get_lastday(year, month) {
+    if ( month !== 2 ) {
+        return LAST_DAY[month];
+    }
+    // 2000年の例外 (400) は考慮していない
+    return year % 4 === 0 ? 29 : 28;
+}
+function get_next_ym(year, month) {
+    return month === 12 ? [year + 1, 1] : [year, month + 1];
+}
+function range(start, end) {
+    const array = [];
+    for ( let i = start ; i <= end ; i++ ) {
+        array.push(i);
+    }
+    return array;
+}
+function get_calendar_matrix(year, month) {
+    const day1 = new Date(year, month - 1, 1);
+    const week1 = day1.getDay();
+    const lastday = get_lastday(year, month);
+    const month_sequence = range(1, lastday);
+    if ( week1 > 0 ) {
+        month_sequence.unshift( ...Array(week1) );
+    }
+    const calendar_matrix = [];
+    while( month_sequence.length > 0 ) {
+        const current_week = month_sequence.splice(0, 7);
+        if ( current_week.length < 7 ) {
+            current_week.push(...Array( 7 - current_week.length ));
+        }
+        calendar_matrix.push(current_week);
+    }
+    return calendar_matrix;
+}
+function get_days_after(year, month, day) {
+    const date = new Date(year, month-1, day);
+    const now = new Date();
+    for ( const key of ["Hours", "Minutes", "Seconds", "Milliseconds"] ) {
+        now["set"+key](0)
+    }
+    const diff = date.getTime() - now.getTime();
+    const diffdate = diff / 1000 / 86400;
+    return diffdate;
+}
+function render_calendar(year, month) {
+    const matrix = get_calendar_matrix(year, month);
+    const lines = [];
+    lines.push(`<caption>${year}年${month}月</caption>`);
+    lines.push(
+        `<thead><tr>` +
+        `<th class="sunday">日</th>` +
+        "月 火 水 木 金".split(/ /).map( w => `<th>${w}</th>`).join("") +
+        `<th class="saturday">土</th>` +
+        `</tr></thead>`
+    );
+    lines.push(`<tbody>`);
+    for ( const row of matrix ) {
+        // 何日前か判定して、色分けする
+        // 21 28 45 55 75 ~330
+        const row2 = row.map( d => [d, get_days_after(year, month, d)]);
+        row2.forEach( ar => ar.push(get_jal_days_after(ar[1])) );
+        lines.push( `<tr>` +
+            row2.map( ([d, da, jda]) => `<td class="jal_days_after_${jda || "other"} ${da === 0 ? "today" : ""}">${d || "-"}</td>` ).join("") + `</tr>`);
+    }
+    lines.push(`</tbody>`);
+    return `<table id="calendar_${year}_${month}" class="calendar">
+${lines.join("\n")}
+</table>`;
+}
+function get_jal_days_after( days_after ) {
+    if ( days_after < 21 ) {
+        return undefined;
+    } else if ( days_after < 28 ) {
+        return 21;
+    } else if ( days_after < 45 ) {
+        return 28;
+    } else if ( days_after < 55 ) {
+        return 45;
+    } else if ( days_after < 75 ) {
+        return 55;
+    } else if ( days_after <= 330 ) {
+        return 75;
+    } else {
+        return undefined;
+    }
+}
+// https://www.jal.co.jp/dom/sakitoku/index.html?sta=HND&ena=OBO&y=2022&m=1
+</script>
+<style type="text/css">
+.sunday { color: red }
+.saturday { color: blue }
+table.calendar {
+    border: 2px solid black;
+    border-collapse: collapse;
+    display: inline-table;
+    margin: 0.5em;
+}
+table.calendar td,
+table.calendar th {
+    border: 1px solid black; 
+    text-align: center;
+    width: 2em;
+    height: 2em;
+}
+table.calendar td.today {
+    font-weight: bold;
+    color: darkorange
+}
+table.calendar thead tr {
+    border-bottom: 2px solid black;
+    background: lightgray;
+}
+.jal_days_after_21 { background-color: rgb(250, 250, 54) }
+.jal_days_after_28 { background-color: rgb(128, 233, 119) }
+.jal_days_after_45 { background-color: rgb(154, 227, 240) }
+.jal_days_after_55 { background-color: rgb(116, 164, 219) }
+.jal_days_after_75 { background-color: rgb(216, 119, 119) }
+</style>
+</head>
+<body>
+
+<p>詳細は<a href="https://www.jal.co.jp/dom/sakitoku/index.html">先得カレンダー</a>を参照。</p>
+<p>凡例：
+<span class="jal_days_after_21">21日前</span>、
+<span class="jal_days_after_28">28日前</span>、
+<span class="jal_days_after_45">45日前</span>、
+<span class="jal_days_after_55">55日前</span>、
+<span class="jal_days_after_75">75日前</span>
+</p>
+
+<div id="calendars">
+</div>
+
+</body>
+</html>
