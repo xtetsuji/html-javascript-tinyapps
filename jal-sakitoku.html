@@ -78,6 +78,7 @@ function render_calendar(year, month) {
     for ( const row of matrix ) {
         // 何日前か判定して、色分けする
         // 21 28 45 55 75 ~330
+        // TODO: 休日APIで休日を赤く表示させたい
         const row2 = row.map( d => [d, get_days_after(year, month, d)]);
         row2.forEach( ar => ar.push(get_jal_days_after(ar[1])) );
         lines.push( `<tr>` +
