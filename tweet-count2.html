@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="robots" content="noindex,nofollow" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />
+<title>文字数カウント</title>
+<style type="text/css">
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #000;
+    color: #bbb;
+  }
+  textarea, button, input[type="text"], input[type="button"] {
+    color: #bbb;
+    background-color: #222;
+  }
+}
+h1 { font-size: 1.5em; }
+strong { color: darkgray; font-weight: bold; font-size: 18pt; }
+input.tweet  { font-size: 14pt; }
+textarea#twitter_draft_counter {
+  font-size: 14pt;
+  width: 100%;
+  height: 5em;
+  overflow: visible;
+}
+</style>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<script type="text/javascript">
+const lazy_hash = {
+  string: "",
+  interval: 30_000,
+  last_queued_at: 0,
+  queue(string) {
+    this.string = string;
+    // 直近 ms 以内に書き込みがあれば書き込みジョブがあるので何もしない
+    // 直近 ms 以内に書き込みがなければジョブを作成
+    const now_time = (new Date()).getTime();
+    if (now_time - this.last_queued_at > this.interval ) {
+      this.last_queued_at = now_time;
+      this.jobid = setTimeout(()=>{
+        const escaped = "#" + encodeURIComponent(this.string);
+        if ( location.hash !== escaped ) {
+          location.hash = escaped;
+          // console.log(`DEBUG: udpate hash: "${this.string}"`);
+        } else {
+          // console.log(`DEBUG: relax hash: because same things`);
+        }
+      }, this.interval);
+      // console.log(`DEBUG: queue "${this.string}"`);
+    } else {
+      // console.log(`DEBUG: not queue`);
+    }
+  },
+  clear() {
+    clearTimeout(this.jobid);
+  }
+};
+$(document).ready(function(){
+  //var count = 1;
+  var hash_text = location.hash.substring(1);
+  if ( hash_text ) {
+      $("#twitter_draft_counter").text(decodeURIComponent(hash_text));
+  }
+  $("#twitter_draft_counter").keyup(function(){
+    var tweet = this.value;
+    if($("#tco_shorten")[0].checked) {
+      // ティコリンクに短縮されたものとして計算する
+      tweet = tweet.replace(/\bhttp:\/\/[^ ]+/g, "http://t.co/1234567890");
+      tweet = tweet.replace(/\bhttps:\/\/[^ ]+/g, "https://t.co/1234567890");
+    }
+    if($("#twitpic_append")[0].checked) {
+      //tweet = tweet + " http://twitpic.com/123456";
+      tweet = tweet + " http://t.co/1234567890"; // やっぱりティコリンク
+    }
+    // location.hash = "#" + encodeURIComponent(tweet);
+    lazy_hash.queue(tweet);
+    document.title =
+      "ツイート文字数カウント：" + tweet.substring(0, 20).replace(/\n/g, " ") + (
+        tweet.length > 20 ? "…" : ""
+      );
+    let char = tweet.length;
+    let bytes = encodeURIComponent(tweet).replace(/%\w\w/g,'?').length;
+    let info_html = '<strong>'+(140-char)+'</strong> (';
+    info_html    += char+'文字、'+bytes+'バイト)<br />';
+    info_html    += 'Twistory的には、残り<strong>'+(255-bytes)+'</strong>バイト、UTF-8文字列では残り約<strong>'+(Math.floor((255-bytes)/3))+'</strong>文字は打てるでしょう。';
+    $("#twitter_draft_info").html(info_html);
+  });
+  $("#twitter_draft_counter").keyup(); /* 一度押しておく */
+
+  $("#tco_shorten").click(function(){
+    $("#twitter_draft_counter").keyup();
+  });
+  $("#twitpic_append").click(function(){
+    $("#twitter_draft_counter").keyup();
+  });
+
+  $("#reset_twitter_draft_counter").click(function(){
+    if(confirm("内容をリセットしますか？")){
+      $("#twitter_draft_counter").val("");
+      $("#twitter_draft_counter").keyup();
+    }
+  });
+  $("#open_twitter_client").click(function(){
+    var screen_name = $("#screen_name").val(); // or .text() ?
+    if(!screen_name)screen_name="";
+//    if(confirm("Tweetbotを起動します")){
+      location.href = "tweetbot://"+screen_name+"/post?text="+encodeURIComponent($("#twitter_draft_counter").val());
+//    }
+  });
+});
+</script>
+
+</head>
+<body>
+
+<h1>文字数カウント</h1>
+
+<!-- 
+  id="twitter_draft_counter1" を作っておいて、これを複製すると良さそう
+  この id の中の要素は id ではなくて class 指定にして複製について問題なくしておく
+-->
+<div class="word_count" id="twitter_draft_counter1">
+<textarea id="twitter_draft_counter"></textarea>
+<br />
+<div style="display: none"><!-- 暫定で見せない -->
+<label><input type="checkbox" id="tco_shorten" checked="checked">t.coリンクで短縮された場合の文字数を計算</label><br />
+<label><input type="checkbox" id="twitpic_append">twitpicのアドレスが一つついた場合の文字数を計算</label><br />
+</div>
+<div id="twitter_draft_info"></div>
+<button id="open_twitter_client">Tweetbotでオープン</button>
+(<label>screen_name: <input type="text" id="screen_name" value="" /></label>)<br />
+<input type="button" id="reset_twitter_draft_counter" value="リセット" />
+</div>
+
+</body>
+</html>
