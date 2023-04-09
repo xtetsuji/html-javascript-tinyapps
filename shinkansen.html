@@ -5,6 +5,16 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>東海道新幹線予約</title>
+<style type="text/css">
+    h1 {
+        font-size: 1.5em;
+        border-bottom: 4px double black;
+        border-top: 4px double black;
+    }
+    summary {
+        cursor: help;
+    }
+</style>
 <script type="text/javascript" src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
 <script>
 function generateGoogleCalendarUrl(text, year) {
@@ -71,6 +81,7 @@ $(function(){
     </script>
 </head>
 <body>
+    <h1>東海道新幹線予約カレンダー登録</h1>
     <div class="input_container">
         <span>解析したい予約完了の文面を入力して下さい</span><br>
         <textarea id="input" cols="100%" rows="20"></textarea>
@@ -86,7 +97,7 @@ $(function(){
 <details>
     <summary>ヘルプ</summary>
     <div>
-        東海道新幹線の予約完了画面の「発売内容」をコピーしてペーストした結果を解析して、Google カレンダーの登録リンクを作成します。
+        東海道新幹線エクスプレス予約の予約完了画面の「発売内容」をコピーしてペーストした結果を解析して、Google カレンダーの登録リンクを作成します。
     </div>
 </details>
 
