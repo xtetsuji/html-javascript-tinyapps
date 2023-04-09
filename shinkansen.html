@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>東海道新幹線予約</title>
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+<script>
+function generateGoogleCalendarUrl(text, year) {
+    const lines = text.split('\n');
+
+    const dateLine = lines.find(line => line.match(/(\d+)月(\d+)日/));
+    const dateMatch = dateLine.match(/(\d+)月(\d+)日/);
+    if ( !year ) year = new Date().getFullYear();
+    console.log(`year=${year}`);
+    const month = dateMatch[1].padStart(2, '0');
+    const day = dateMatch[2].padStart(2, '0');
+
+    const departureLine = lines.find(line => line.match(/(\d+)時(\d+)分発/));
+    const departureTime = departureLine.match(/(\d+)時(\d+)分発/);
+    const departureStation = departureLine.match(/(\S+)時(\S+)分発\s+([\S\s]+)/)[3].replace(/\s+/g, '');
+
+    const arrivalLine = lines.find(line => line.match(/(\d+)時(\d+)分着/));
+    const arrivalTime = arrivalLine.match(/(\d+)時(\d+)分着/);
+    const arrivalStation = arrivalLine.match(/(\S+)時(\S+)分着\s+([\S\s]+)/)[3].replace(/\s+/g, '');
+
+    const trainNumberLine = lines.find(line => line.match(/(のぞみ|ひかり|こだま)/));
+    const trainNumber = trainNumberLine.match(/(のぞみ|ひかり|こだま).*/)[0].replace(/\s+/g, "");
+
+    const startTime = `${departureTime[1].padStart(2, '0')}${departureTime[2].padStart(2, '0')}00`;
+    const endTime = `${arrivalTime[1].padStart(2, '0')}${arrivalTime[2].padStart(2, '0')}00`;
+
+    const eventTitle = `東海道新幹線${trainNumber}で${departureStation}駅から${arrivalStation}駅まで移動`;
+    const eventDetails = encodeURIComponent(text);
+
+    const calendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(eventTitle)}&dates=${year}${month}${day}T${startTime}/${year}${month}${day}T${endTime}&details=${eventDetails}`;
+
+    return calendarUrl;
+}
+$(function(){
+    $("#run").on("click", function(){
+        //$("#calendar_link").html("clicked");
+        const text = $("#input").val();
+        //console.log(`text is ${text}`);
+        if ( text.length === 0 ) {
+            alert("入力がありません");
+            throw new Error("no input error");
+        }
+        try {
+            const year = $("#year").val();
+            const url = generateGoogleCalendarUrl(text, year);
+            //console.log(`url is ${url}`);
+            $("#calendar_link").html(`<a href="${url}" target="_blank">${url}</a>`);
+        } catch(e) {
+            alert(`エラーが発生しました：${e}`);
+        }
+    });
+    $(".year_button").on("click", function(){
+        const id = $(this).attr("id");
+        // console.log(`id=${id}`);
+        const diff = id === "last_year" ? -1
+                   : id === "next_year" ? +1 
+                   :                      undefined;
+        if ( !diff ) throw new Error("year button unkonwn error");
+        // console.log(`diff=${diff}`);
+        $("#year").val(new Date().getFullYear() + diff);
+    });
+});
+
+    </script>
+</head>
+<body>
+    <div class="input_container">
+        <span>解析したい予約完了の文面を入力して下さい</span><br>
+        <textarea id="input" cols="100%" rows="20"></textarea>
+        （オプション：乗車年 <input type="text" name="year" id="year" size="4">
+        <button id="last_year" class="year_button">去年</button><button id="next_year" class="year_button">来年</button>
+        ）
+    </div>
+<div>
+    <button id="run">↓出力</button>
+    <div id="calendar_link">.</div>
+</div>
+<hr>
+<details>
+    <summary>ヘルプ</summary>
+    <div>
+        東海道新幹線の予約完了画面の「発売内容」をコピーしてペーストした結果を解析して、Google カレンダーの登録リンクを作成します。
+    </div>
+</details>
+
+</body>
+</html>
