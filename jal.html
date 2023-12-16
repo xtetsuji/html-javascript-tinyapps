@@ -54,6 +54,7 @@ ${formatted_date_string}
 ${$("#reserve_content_url").val()}
 
 ■番号
+航空券番号：${$("#ticket_number").val()}
 予約番号：${$("#reservation_number").val()}
 確認番号：${$("#confirmation_number").val()}
 取扱番号：${$("#service_number").val()}
@@ -190,6 +191,7 @@ button#run {
     <li><label>運賃額：<input type="text" id="fare_sum"></label></li>
     <li><label>座席指定：<input type="text" id="seat_number"></label></li>
     <li><label>予約確認リンク<input type="url" id="reserve_content_url"></label></li>
+    <li><label>航空券番号：<input type="text" id="ticket_number"></label></li>
     <li><label>予約番号：<input type="text" id="reservation_number"></label></li>
     <li><label>確認番号：<input type="text" id="confirmation_number"></label>（必要であれば）</li>
     <li><labe>取扱番号：<input type="text" id="service_number">（必要であれば）</labe></li>
