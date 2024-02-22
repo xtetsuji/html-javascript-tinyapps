@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>open scheme</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script>
+        function log(msg) {
+            $('#console').append(msg + "\n");
+        }
+        (() => {
+            const qs = location.search;
+            if ( !qs || qs === '?' ) {
+                return;
+            }
+            const arg = qs.slice(1); // 冒頭 ? 落とし
+            if ( arg.match(/^([a-zA-Z0-9_-]+):/) ) {
+                console.log(`scheme is ${RegExp.$1}. open ${arg}}`);
+                location.href = arg;
+            }
+        })();
+    </script>
+    <style type="text/css">
+        .console {
+            background-color: #000;
+            color: #fff;
+            padding: 1em;
+        }
+        fieldset.console legend {
+            background-color: #000;
+            color: #fff;
+            border-radius: 5px;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+<p>open scheme.</p>
+
+<fieldset class="console">
+    <legend>console</legend>
+    <pre class="console" id="console">
+    </pre>
+</fieldset>
+
+<p>使い方メモ：URL の `?` 以降に someapp://foo/bar/buz など URL Scheme を書くとよいです。</p>
+</body>
+</html>
