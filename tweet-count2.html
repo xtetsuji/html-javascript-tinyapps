@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 
 <meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />
-<title>文字数カウント</title>
+<title>ツイート文字数カウント</title>
 <style type="text/css">
 @media (prefers-color-scheme: dark) {
   body {
@@ -41,7 +41,8 @@ const lazy_hash = {
     if (now_time - this.last_queued_at > this.interval ) {
       this.last_queued_at = now_time;
       this.jobid = setTimeout(()=>{
-        const escaped = "#" + encodeURIComponent(this.string);
+        this.jobid = undefined;
+        const escaped = this.string ? "#" + encodeURIComponent(this.string) : "";
         if ( location.hash !== escaped ) {
           location.hash = escaped;
           // console.log(`DEBUG: udpate hash: "${this.string}"`);
@@ -56,6 +57,7 @@ const lazy_hash = {
   },
   clear() {
     clearTimeout(this.jobid);
+    this.jobid = undefined;
   }
 };
 $(document).ready(function(){
@@ -78,8 +80,8 @@ $(document).ready(function(){
     // location.hash = "#" + encodeURIComponent(tweet);
     lazy_hash.queue(tweet);
     document.title =
-      "ツイート文字数カウント：" + tweet.substring(0, 20).replace(/\n/g, " ") + (
-        tweet.length > 20 ? "…" : ""
+      "ツイート文字数カウント：" + tweet.substring(0, 40).replace(/\n/g, " ") + (
+        tweet.length > 40 ? "…" : ""
       );
     let char = tweet.length;
     let bytes = encodeURIComponent(tweet).replace(/%\w\w/g,'?').length;
