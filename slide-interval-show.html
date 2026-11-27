@@ -100,7 +100,7 @@
       </div>
 
       <footer>
-        <div style="margin-top:8px">動画は無音で最後まで再生してから切り替わります。</div>
+        <div style="margin-top:8px">動画は音声付きで最後まで再生してから切り替わります。</div>
         <div style="margin-top:8px">ヒント: Space = 再生/一時停止, ← → = 前/次, Enter = 全画面切替</div>
       </footer>
     </div>
@@ -220,11 +220,12 @@
       drawImageToCanvas(item);
       animationId = requestAnimationFrame(frame);
     }
-    // Muting permits automatic playback without browser autoplay restrictions.
     video.play().then(()=>{ if(version === playbackVersion) frame(); }).catch(err => {
       if(version !== playbackVersion) return;
       console.warn('動画を再生できません', err);
-      status.textContent = `動画を再生できません: ${item.name}`;
+      status.textContent = err.name === 'NotAllowedError'
+        ? '音声付き再生がブロックされました。「再生」を押してください。'
+        : `動画を再生できません: ${item.name}`;
       stop();
     });
   }
@@ -353,7 +354,7 @@
       }else if(f.type.startsWith('video/')){
         const url = URL.createObjectURL(f);
         const video = document.createElement('video');
-        video.muted = true; video.playsInline = true; video.preload = 'auto';
+        video.playsInline = true; video.preload = 'auto';
         video.addEventListener('ended', ()=>{
           if(playing && images[current] && images[current].img === video) next();
         });
@@ -441,6 +442,11 @@
     popup.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Slideshow</title><style>html,body{height:100%;margin:0;background:#000;display:flex}canvas{margin:auto;max-width:100%;max-height:100%}</style></head><body><canvas></canvas></body></html>');
     popup.document.close();
     const cv = popup.document.querySelector('canvas');
+    const retry = popup.document.createElement('button');
+    retry.textContent = '音声付きで再生';
+    retry.style.cssText = 'display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);padding:12px 20px;font-size:16px;cursor:pointer';
+    popup.document.body.appendChild(retry);
+    retry.addEventListener('click', ()=>{ retry.style.display = 'none'; show(); });
     cv.width = Math.max(100, Number(widthInput.value)||1280);
     cv.height = Math.max(100, Number(heightInput.value)||720);
     const pc = cv.getContext('2d');
@@ -450,7 +456,7 @@
     const interval = Math.max(1, Number(intervalInput.value)||5) * 1000;
     const slides = images.map(item=>{
       const media = popup.document.createElement(item.kind === 'video' ? 'video' : 'img');
-      if(item.kind === 'video'){ media.muted = true; media.playsInline = true; media.preload = 'auto'; }
+      if(item.kind === 'video'){ media.playsInline = true; media.preload = 'auto'; }
       media.src = item.url;
       return {media, kind:item.kind};
     });
@@ -473,7 +479,12 @@
         media.play().then(function animate(){
           if(closed || slides[index] !== slide || media.paused) return;
           clear(); draw(media); frameId = popup.requestAnimationFrame(animate);
-        }).catch(err=>console.warn('動画を再生できません', err));
+        }).catch(err=>{
+          if(closed || slides[index] !== slide) return;
+          console.warn('動画を再生できません', err);
+          retry.textContent = err.name === 'NotAllowedError' ? '音声付きで再生' : '動画の再生を再試行';
+          retry.style.display = 'block';
+        });
       }else timeoutId = popup.setTimeout(advance, interval);
     }
     function advance(){
