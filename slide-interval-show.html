@@ -36,9 +36,9 @@
   <div class="app">
     <div class="panel" id="panel">
       <h1>スライド設定</h1>
-      <label>画像 / PDF を追加（複数可）</label>
-      <input id="file" type="file" accept="image/*,application/pdf" multiple />
-      <div class="dropzone" id="drop">またはここに画像/ PDF をドラッグ＆ドロップ（PDFは1ページスライドを想定）</div>
+      <label>画像 / PDF / 動画を追加（複数可）</label>
+      <input id="file" type="file" accept="image/*,video/*,application/pdf" multiple />
+      <div class="dropzone" id="drop">またはここに画像 / PDF / 動画をドラッグ＆ドロップ（PDFは1ページスライドを想定）</div>
 
       <div style="display:flex;gap:8px">
         <div style="flex:1">
@@ -100,6 +100,7 @@
       </div>
 
       <footer>
+        <div style="margin-top:8px">動画は無音で最後まで再生してから切り替わります。</div>
         <div style="margin-top:8px">ヒント: Space = 再生/一時停止, ← → = 前/次, Enter = 全画面切替</div>
       </footer>
     </div>
@@ -147,11 +148,14 @@
   const transitionInput = document.getElementById('transition');
   const modeSelect = document.getElementById('modeSelect');
 
-  let images = []; // {img, url, name, kind: 'image'|'pdf'}
+  let images = []; // {img, url, name, kind: 'image'|'pdf'|'video'}
   let current = 0;
   let timer = null;
   let playing = false;
   let transitioning = false;
+  let animationId = null;
+  let transitionId = null;
+  let playbackVersion = 0;
 
   function updateStatus(){
     if(images.length===0){ status.textContent = '画像なし'; return }
@@ -166,7 +170,7 @@
   function computeDrawParams(img){
     const mode = document.querySelector('input[name=fit]:checked').value;
     const cw = canvas.width, ch = canvas.height;
-    const iw = img.width, ih = img.height;
+    const iw = img.videoWidth || img.width, ih = img.videoHeight || img.height;
     if(iw===0||ih===0) return {dx:0,dy:0,dw:0,dh:0};
     let scale, dw, dh, dx, dy;
     if(mode === 'contain'){
@@ -183,7 +187,7 @@
 
   function drawScaled(img){
     const p = computeDrawParams(img);
-    ctx.drawImage(img, p.dx, p.dy, p.dw, p.dh);
+    if(p.dw && p.dh) ctx.drawImage(img, p.dx, p.dy, p.dw, p.dh);
   }
 
   function drawImageToCanvas(imgObj){
@@ -192,14 +196,49 @@
     drawScaled(imgObj.img);
   }
 
+  function cancelPlayback(){
+    playbackVersion++;
+    clearTimeout(timer); timer = null;
+    cancelAnimationFrame(animationId); animationId = null;
+    const item = images[current];
+    if(item && item.kind === 'video') item.img.pause();
+  }
+
+  function scheduleCurrent(){
+    cancelPlayback();
+    const item = images[current];
+    if(!playing || !item) return;
+    if(item.kind !== 'video'){
+      timer = setTimeout(next, Math.max(1, Number(intervalInput.value) || 5) * 1000);
+      return;
+    }
+    const video = item.img;
+    const version = playbackVersion;
+    if(video.ended) video.currentTime = 0;
+    function frame(){
+      if(!playing || images[current] !== item || transitioning) return;
+      drawImageToCanvas(item);
+      animationId = requestAnimationFrame(frame);
+    }
+    // Muting permits automatic playback without browser autoplay restrictions.
+    video.play().then(()=>{ if(version === playbackVersion) frame(); }).catch(err => {
+      if(version !== playbackVersion) return;
+      console.warn('動画を再生できません', err);
+      status.textContent = `動画を再生できません: ${item.name}`;
+      stop();
+    });
+  }
+
   function startTransition(toIndex){
     if(images.length===0) return;
     toIndex = (toIndex + images.length) % images.length;
-    if(toIndex === current){ render(); return; }
+    if(toIndex === current){ render(); if(playing && images[current].kind === 'video'){ images[current].img.currentTime = 0; scheduleCurrent(); } else if(playing) scheduleCurrent(); return; }
     const mode = modeSelect.value;
     const duration = Math.max(0, Number(transitionInput.value) || 0) * 1000;
-    if(mode === 'cut' || duration <= 0){ current = toIndex; render(); return; }
     if(transitioning) return; // ignore requests during transition
+    cancelPlayback();
+    if(images[toIndex].kind === 'video') images[toIndex].img.currentTime = 0;
+    if(mode === 'cut' || duration <= 0){ current = toIndex; render(); scheduleCurrent(); return; }
     transitioning = true;
     const fromIndex = current;
     const start = performance.now();
@@ -211,10 +250,10 @@
       ctx.save(); ctx.globalAlpha = 1 - t; drawScaled(images[fromIndex].img); ctx.restore();
       // draw to with alpha
       ctx.save(); ctx.globalAlpha = t; drawScaled(images[toIndex].img); ctx.restore();
-      if(elapsed < duration){ requestAnimationFrame(step); }
-      else { current = toIndex; transitioning = false; render(); }
+      if(elapsed < duration){ transitionId = requestAnimationFrame(step); }
+      else { current = toIndex; transitioning = false; transitionId = null; render(); scheduleCurrent(); }
     }
-    requestAnimationFrame(step);
+    transitionId = requestAnimationFrame(step);
   }
 
   function render(){
@@ -234,14 +273,12 @@
   }
 
   function start(){
-    const secs = Math.max(1, Number(intervalInput.value) || 5);
-    stop();
-    timer = setInterval(()=>{ next(); }, secs*1000);
     playing = true; playBtn.textContent = '一時停止';
+    if(!transitioning) scheduleCurrent();
   }
   function stop(){
-    if(timer){ clearInterval(timer); timer = null }
     playing = false; playBtn.textContent = '再生';
+    cancelPlayback();
   }
   function togglePlay(){ playing ? stop() : start() }
 
@@ -249,7 +286,7 @@
     thumbs.innerHTML = '';
     images.forEach((it, i) => {
       const imgEl = document.createElement('img');
-      imgEl.src = it.url;
+      imgEl.src = it.thumbUrl || it.url;
       imgEl.className = 'thumb' + (i===current ? ' active' : '');
       imgEl.title = `${i+1}: ${it.name} ${it.kind==='pdf' ? '(PDF)' : ''}`;
       imgEl.addEventListener('click', ()=>{ startTransition(i); });
@@ -296,7 +333,7 @@
   }
 
   function handleFiles(fileList){
-    const files = Array.from(fileList).filter(f=>f.type.startsWith('image/') || f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+    const files = Array.from(fileList).filter(f=>f.type.startsWith('image/') || f.type.startsWith('video/') || f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
     if(files.length===0) return;
 
     const desiredW = Math.max(100, Number(widthInput.value)||1280);
@@ -313,6 +350,25 @@
           const img = new Image(); img.onload = ()=> resolve({img, url:off.toDataURL(), name:f.name+' (PDF: render failed)', kind:'pdf'});
           img.src = off.toDataURL();
         });
+      }else if(f.type.startsWith('video/')){
+        const url = URL.createObjectURL(f);
+        const video = document.createElement('video');
+        video.muted = true; video.playsInline = true; video.preload = 'auto';
+        video.addEventListener('ended', ()=>{
+          if(playing && images[current] && images[current].img === video) next();
+        });
+        video.addEventListener('loadeddata', ()=>{
+          const off = document.createElement('canvas');
+          off.width = video.videoWidth; off.height = video.videoHeight;
+          off.getContext('2d').drawImage(video, 0, 0);
+          resolve({img:video, url, thumbUrl:off.toDataURL('image/jpeg'), name:f.name, kind:'video'});
+        }, {once:true});
+        video.addEventListener('error', ()=>{
+          URL.revokeObjectURL(url);
+          console.warn('動画を読み込めません', f.name);
+          resolve(null);
+        }, {once:true});
+        video.src = url;
       }else{
         const fr = new FileReader();
         fr.onload = ()=>{
@@ -325,11 +381,16 @@
     }));
 
     Promise.all(promises).then(results=>{
+      results = results.filter(Boolean);
+      if(!results.length){ alert('ファイルを読み込めませんでした。'); return; }
+      cancelPlayback();
+      cancelAnimationFrame(transitionId); transitioning = false;
       const firstNewIndex = images.length;
       images = images.concat(results);
       if(images.length>0) current = firstNewIndex; // jump to first newly added
       updateThumbs();
       render();
+      scheduleCurrent();
     }).catch(err=>{ console.warn(err); });
   }
 
@@ -372,39 +433,78 @@
     }catch(e){ console.warn(e) }
   });
 
-  // open new window popup - includes crossfade logic as well
+  // The popup has its own media elements and advances videos on their ended event.
   openNewBtn.addEventListener('click', ()=>{
-    if(images.length===0){ alert('画像がありません'); return }
-    const imgs = images.map(i=>i.url);
-    const w = Number(widthInput.value)||1280;
-    const h = Number(heightInput.value)||720;
-    const interval = Number(intervalInput.value)||5;
-    const fit = document.querySelector('input[name=fit]:checked').value;
-    const duration = Math.max(0, Number(transitionInput.value)||0);
-    const mode = modeSelect.value;
-
-    const popupHtml = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Slideshow</title>
-    <style>html,body{height:100%;margin:0;background:#000;color:#fff;display:flex;flex-direction:column}canvas{margin:auto;display:block;max-width:100%;max-height:100%}</style></head><body>
-    <canvas id="cv" width="${w}" height="${h}"></canvas>
-    <script>
-      const imgs = ${JSON.stringify(imgs)};
-      let index = 0; const cv = document.getElementById('cv'); const ctx = cv.getContext('2d');
-      function computeParams(img){ const cw=cv.width,ch=cv.height,iw=img.width,ih=img.height; if(!iw||!ih) return {dx:0,dy:0,dw:0,dh:0}; let scale; if('${fit}'==='contain') scale=Math.min(cw/iw,ch/ih); else scale=Math.max(cw/iw,ch/ih); const dw=Math.round(iw*scale), dh=Math.round(ih*scale); return {dx:Math.round((cw-dw)/2),dy:Math.round((ch-dh)/2),dw,dh}; }
-      function drawScaled(img){ const p=computeParams(img); ctx.drawImage(img,p.dx,p.dy,p.dw,p.dh); }
-      function drawOne(i){ const img=new Image(); img.onload=()=>{ ctx.fillStyle='#000'; ctx.fillRect(0,0,cv.width,cv.height); drawScaled(img); }; img.src=imgs[i]; }
-      function crossfade(from,to,dur){ const start=performance.now(); const imgFrom=new Image(), imgTo=new Image(); imgFrom.onload = ()=>{ imgTo.onload = ()=>{ function step(now){ const t=Math.min(1,(now-start)/ (dur*1000)); ctx.clearRect(0,0,cv.width,cv.height); ctx.save(); ctx.globalAlpha = 1-t; drawScaled(imgFrom); ctx.restore(); ctx.save(); ctx.globalAlpha = t; drawScaled(imgTo); ctx.restore(); if(t<1) requestAnimationFrame(step); else { index = to; } } requestAnimationFrame(step); }; imgTo.src=imgs[to]; }; imgFrom.src=imgs[from]; }
-      drawOne(0);
-      const intervalMs = Math.max(1, ${interval}) * 1000;
-      setInterval(()=>{ const next = (index + 1) % imgs.length; if('${mode}'==='crossfade' && ${duration} > 0) crossfade(index, next, ${duration}); else { index = next; drawOne(index); } }, intervalMs);
-      cv.addEventListener('dblclick', ()=>{ if(!document.fullscreenElement) cv.requestFullscreen().catch(()=>{}); else document.exitFullscreen().catch(()=>{}); });
-      setTimeout(()=>{ try{ cv.requestFullscreen(); }catch(e){} }, 300);
-    <\/script>
-    </body></html>`;
-
+    if(!images.length){ alert('スライドがありません'); return; }
     const popup = window.open('', '_blank');
-    if(!popup){ alert('ポップアップがブロックされました。別タブで開く許可を有効にしてください'); return }
-    popup.document.write(popupHtml);
+    if(!popup){ alert('ポップアップがブロックされました。別タブで開く許可を有効にしてください'); return; }
+    popup.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Slideshow</title><style>html,body{height:100%;margin:0;background:#000;display:flex}canvas{margin:auto;max-width:100%;max-height:100%}</style></head><body><canvas></canvas></body></html>');
     popup.document.close();
+    const cv = popup.document.querySelector('canvas');
+    cv.width = Math.max(100, Number(widthInput.value)||1280);
+    cv.height = Math.max(100, Number(heightInput.value)||720);
+    const pc = cv.getContext('2d');
+    const fit = document.querySelector('input[name=fit]:checked').value;
+    const duration = Math.max(0, Number(transitionInput.value)||0) * 1000;
+    const mode = modeSelect.value;
+    const interval = Math.max(1, Number(intervalInput.value)||5) * 1000;
+    const slides = images.map(item=>{
+      const media = popup.document.createElement(item.kind === 'video' ? 'video' : 'img');
+      if(item.kind === 'video'){ media.muted = true; media.playsInline = true; media.preload = 'auto'; }
+      media.src = item.url;
+      return {media, kind:item.kind};
+    });
+    let index = 0, frameId = null, timeoutId = null, closed = false;
+    function draw(media, alpha=1){
+      const iw = media.videoWidth || media.width, ih = media.videoHeight || media.height;
+      if(!iw || !ih || (media.tagName === 'VIDEO' && media.readyState < 2)) return;
+      const scale = fit === 'contain' ? Math.min(cv.width/iw, cv.height/ih) : Math.max(cv.width/iw, cv.height/ih);
+      const w = iw*scale, h = ih*scale;
+      pc.save(); pc.globalAlpha = alpha; pc.drawImage(media, (cv.width-w)/2, (cv.height-h)/2, w, h); pc.restore();
+    }
+    function clear(){ pc.fillStyle = '#000'; pc.fillRect(0,0,cv.width,cv.height); }
+    function show(){
+      if(closed) return;
+      const slide = slides[index], media = slide.media;
+      clear(); draw(media);
+      if(slide.kind === 'video'){
+        if(media.ended) media.currentTime = 0;
+        media.onended = advance;
+        media.play().then(function animate(){
+          if(closed || slides[index] !== slide || media.paused) return;
+          clear(); draw(media); frameId = popup.requestAnimationFrame(animate);
+        }).catch(err=>console.warn('動画を再生できません', err));
+      }else timeoutId = popup.setTimeout(advance, interval);
+    }
+    function advance(){
+      if(closed) return;
+      popup.clearTimeout(timeoutId); popup.cancelAnimationFrame(frameId);
+      const from = slides[index].media;
+      if(slides[index].kind === 'video') from.pause();
+      const nextIndex = (index+1)%slides.length;
+      if(slides[nextIndex].kind === 'video') slides[nextIndex].media.currentTime = 0;
+      if(nextIndex === index || mode !== 'crossfade' || !duration){ index = nextIndex; show(); return; }
+      const to = slides[nextIndex].media, start = performance.now();
+      function step(now){
+        if(closed) return;
+        const t = Math.min(1, (now-start)/duration);
+        clear(); draw(from, 1-t); draw(to, t);
+        if(t < 1) frameId = popup.requestAnimationFrame(step);
+        else { index = nextIndex; show(); }
+      }
+      frameId = popup.requestAnimationFrame(step);
+    }
+    // Wait for all media to have a drawable first frame before starting.
+    Promise.all(slides.map(({media, kind})=>new Promise(resolve=>{
+      if(kind === 'video' ? media.readyState >= 2 : media.complete && media.naturalWidth) return resolve();
+      media.addEventListener(kind === 'video' ? 'loadeddata' : 'load', resolve, {once:true});
+      media.addEventListener('error', resolve, {once:true});
+    }))).then(show);
+    cv.addEventListener('dblclick', ()=>{
+      if(!popup.document.fullscreenElement) cv.requestFullscreen().catch(()=>{});
+      else popup.document.exitFullscreen().catch(()=>{});
+    });
+    popup.addEventListener('beforeunload', ()=>{ closed = true; slides.forEach(s=>{ if(s.kind === 'video') s.media.pause(); }); });
   });
 
   // when fullscreen changes, resize canvas to screen size while preserving chosen slide size ratio
